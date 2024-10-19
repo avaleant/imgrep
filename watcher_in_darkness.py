@@ -11,10 +11,12 @@ import os
 from dotenv import load_dotenv
 
 from ollama_vision_client import OllamaVisionClient
+from tess_reader import TessReader
 
 class MemeWatcher(FileSystemEventHandler):
     def __init__(self, db):
         self.client = OllamaVisionClient(host="http://localhost:11434")
+        self.reader = TessReader()
         self.db = db
 
     def on_created(self, event):
@@ -51,7 +53,9 @@ class MemeWatcher(FileSystemEventHandler):
                     prompt="What text is in this image?",
                     image_paths=[file_path]
                     )
-                db.insert({'file': file_path, 'transcription': response["response"]})
+                ocr_transcription = self.reader.ocr(file_path)
+
+                db.insert({'file': file_path, 'llm_transcription': response["response"], 'ocr_transcription': ocr_transcription})
                 print(response['response'])
          except Exception as e:
                 print(f"Error: {e}")
