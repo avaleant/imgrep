@@ -4,13 +4,13 @@ import sys
 
 db = TinyDB('memes.json')
 
-# Extremely primitive way to fuzz.partial_ratio based on two keys in a value set
+# Extremely primitive way to fuzz based on two keys in a value set
 # taking their average.
 def ratio_hk(e1, e2, processor=None, score_cutoff=None):
-    to_llm = fuzz.partial_ratio(e1, e2['llm_transcription'], 
+    to_llm = fuzz.token_set_ratio(e1.lower(), e2['llm_transcription'].lower(), 
                       processor=processor, score_cutoff=score_cutoff)
     # print(f"Score for {e2['llm_transcription']} is {to_llm}")
-    to_ocr = fuzz.partial_ratio(e1, e2['ocr_transcription'], 
+    to_ocr = fuzz.token_set_ratio(e1.lower(), e2['ocr_transcription'].lower(), 
                       processor=processor, score_cutoff=score_cutoff)
     # print(f"Score for {e2['ocr_transcription']} is {to_ocr}")
     return (to_llm + to_ocr) / 2
