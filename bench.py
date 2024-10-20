@@ -10,7 +10,7 @@ from ollama_vision_client import OllamaVisionClient
 def main():
     parser = argparse.ArgumentParser(description="Send images to Ollama vision models")
     parser.add_argument("--model", default="moondream", help="Model to use (default: moondream)")
-    parser.add_argument("--prompt", help="Prompt to send to model")
+    parser.add_argument("--prompt", default="Describe this image:", help="Prompt to send to model")
     parser.add_argument("--host", default="http://localhost:11434", help="Ollama host")
     parser.add_argument("--images", nargs="+", required=True, help="Paths to image files")
     parser.add_argument("--stream", action="store_true", help="Stream the response")

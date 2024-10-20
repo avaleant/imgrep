@@ -9,6 +9,7 @@ from tinydb import TinyDB, Query
 from rapidfuzz import process, fuzz
 import os
 from dotenv import load_dotenv
+import traceback
 
 from ollama_vision_client import OllamaVisionClient
 from tess_reader import TessReader
@@ -60,6 +61,7 @@ class MemeWatcher(FileSystemEventHandler):
                 print("OCR: " + ocr_transcription)
          except Exception as e:
                 print(f"Error: {e}")
+                print(traceback.format_exc())
     
     def on_moved(self, event):         
         if not event.is_directory:
