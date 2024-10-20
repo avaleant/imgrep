@@ -10,15 +10,30 @@ from rapidfuzz import process, fuzz
 import os
 from dotenv import load_dotenv
 import traceback
+import signal
+from contextlib import contextmanager
+import subprocess
 
 from ollama_vision_client import OllamaVisionClient
 from tess_reader import TessReader
 
+class TimeoutException(Exception): pass
+
+@contextmanager
+def time_limit(seconds):
+    def signal_handler(signum, frame):
+        raise TimeoutException(f"Process {signum} timed out")
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
 class MemeWatcher(FileSystemEventHandler):
     def __init__(self, db):
-        self.client = OllamaVisionClient(host="http://localhost:11434")
-        self.reader = TessReader()
-        self.db = db
+        self.queue = []
+        self.transcriber = TranscriptionHandler(db)
 
     def on_created(self, event):
         if not event.is_directory:
@@ -31,7 +46,9 @@ class MemeWatcher(FileSystemEventHandler):
                     return
 
                 if file_type.startswith('image'):
-                    self.transcribe(file_path)
+                    self.queue.append(file_path)
+                    print(f"{len(self.queue)} items currently in queue.")
+                    # self.transcribe(file_path)
             except FileNotFoundError:
                   print(f"File at {file_path} was created and immediately destroyed.")
 
@@ -46,8 +63,35 @@ class MemeWatcher(FileSystemEventHandler):
             except FileNotFoundError:
                 print(f"{file_path} destroyed immediately after modification.")
 
+    def handle_queue(self):
+        for path in self.queue:
+            try:
+                self.transcriber.transcribe(path)
+            finally:
+                self.queue.remove(path)
+
+    def get_file_type(self, file_path):
+         mime = magic.Magic(mime=True)
+         return mime.from_file(file_path)
+
+class TranscriptionHandler:
+    def __init__(self, db):
+        self.client = OllamaVisionClient(host="http://localhost:11434")
+        self.reader = TessReader()
+        self.db = db
+        self.timeout = 120
+
     def transcribe(self, file_path):
          print(f"Saw an image {file_path}")
+         try:
+             with time_limit(self.timeout):
+                 self._transcribe_exec(file_path)
+         except TimeoutException as e:
+             print(f"Couldn't process {file_path}. Timed out after {self.timeout} seconds.")
+             self.shell_restart_ollama()
+
+
+    def _transcribe_exec(self, file_path):
          try:
                 response = self.client.generate_response(
                     model="moondream",
@@ -61,7 +105,23 @@ class MemeWatcher(FileSystemEventHandler):
                 print("OCR: " + ocr_transcription)
          except Exception as e:
                 print(f"Error: {e}")
-                print(traceback.format_exc())
+                self.shell_restart_ollama()
+                
+    # temporary stopgap, restart shell in case of errors that break server
+    # (e.g. extremely long processes failing to terminate server side)
+    def shell_restart_ollama(self):
+        print("Restarting Ollama...")
+        subprocess.run(["ollama", "stop", "moondream"])
+        process = subprocess.Popen(["ollama run moondream"],
+                                   stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE,
+                                   text=True,
+                                   shell=True)
+        time.sleep(1)
+        process.communicate(input="\x04")
+        process.wait()
+        return process.returncode
     
     def on_moved(self, event):         
         if not event.is_directory:
@@ -71,9 +131,6 @@ class MemeWatcher(FileSystemEventHandler):
                 print(f"Completing a download.")
                 self.transcribe(event.dest_path)
 
-    def get_file_type(self, file_path):
-         mime = magic.Magic(mime=True)
-         return mime.from_file(file_path)
 
 if __name__ == "__main__":
     load_dotenv()
@@ -91,6 +148,7 @@ if __name__ == "__main__":
     try:
         while True:
             time.sleep(1)
+            event_handler.handle_queue()
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
