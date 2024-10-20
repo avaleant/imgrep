@@ -45,7 +45,8 @@ class MemeWatcher(FileSystemEventHandler):
                     print(f"Partial download phantom {file_path}")
                     return
 
-                if file_type.startswith('image'):
+                if file_type.startswith('image') and not file_type == 'image/gif':
+                    # print("FT:" + file_type)
                     self.queue.append(file_path)
                     print(f"{len(self.queue)} items currently in queue.")
                     # self.transcribe(file_path)
@@ -69,6 +70,7 @@ class MemeWatcher(FileSystemEventHandler):
                 self.transcriber.transcribe(path)
             finally:
                 self.queue.remove(path)
+                print(f"Entry handled, queue now at {len(self.queue)}")
 
     def get_file_type(self, file_path):
          mime = magic.Magic(mime=True)
