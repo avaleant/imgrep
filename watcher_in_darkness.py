@@ -56,7 +56,8 @@ class MemeWatcher(FileSystemEventHandler):
                 ocr_transcription = self.reader.ocr(file_path)
 
                 db.insert({'file': file_path, 'llm_transcription': response["response"], 'ocr_transcription': ocr_transcription})
-                print(response['response'])
+                print("LLM: " + response['response'])
+                print("OCR: " + ocr_transcription)
          except Exception as e:
                 print(f"Error: {e}")
     
