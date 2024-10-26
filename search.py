@@ -5,11 +5,13 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 import os
+from functools import partial
 
 db = TinyDB('memes.json')
 
 # Extremely primitive way to fuzz based on two keys in a value set
 # taking their average.
+
 def ratio_hk(e1, e2, processor=None, score_cutoff=None):
     to_llm = fuzz.token_set_ratio(e1.lower(), e2['llm_transcription'].lower(), 
                       processor=processor, score_cutoff=score_cutoff)
@@ -19,8 +21,8 @@ def ratio_hk(e1, e2, processor=None, score_cutoff=None):
     # print(f"Score for {e2['ocr_transcription']} is {to_ocr}")
     return (to_llm + to_ocr) / 2
 
-def search(query, limit=5):
-    return process.extract(query, db.all(), limit=limit, scorer=ratio_hk)
+def search(query, limit=10, score_cutoff=None):
+    return process.extract(query, db.all(), limit=limit, scorer=ratio_hk, score_cutoff=score_cutoff)
 
 class ImageSearcher(tk.Tk):
     def __init__(self):
@@ -40,12 +42,29 @@ class ImageSearcher(tk.Tk):
         search_button = ttk.Button(search_frame, text="Search", command=self.perform_search)
         search_button.pack(side=tk.LEFT)
 
+        self.results_label = ttk.Label(self, text="Enter your query above")
+        self.results_label.pack(pady=0, padx=10, anchor=tk.W)
+
         self.results_frame = ttk.Frame(self)
         self.results_frame.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
     def perform_search(self):
         query = self.search_entry.get()
-        results = search(query, limit=5)
+        if not query.strip():
+            self.results_label.config(text="Please enter a search query.")
+            return
+
+        prev = search(query, limit=None, score_cutoff=49)
+
+        result_count = len(prev)
+        append = ""
+        # only 10 results will be shown at max
+        # this triggers if less than 10 results matched score_cutoff
+        if result_count < 11:
+            append = ", showing less likely results"
+        self.results_label.config(text=f"{result_count} likely match(es) found for {query}{append}")
+
+        results = search(query)
 
         # Clear previous results
         for widget in self.results_frame.winfo_children():
@@ -76,8 +95,8 @@ class ImageSearcher(tk.Tk):
 
             ttk.Label(info_frame, text=f"File: {os.path.basename(item['file'])}").pack(anchor=tk.W)
             ttk.Label(info_frame, text=f"Score: {score:.2f}").pack(anchor=tk.W)
-            ttk.Label(info_frame, text=f"LLM: {item['llm_transcription'][:50]}...").pack(anchor=tk.W)
-            ttk.Label(info_frame, text=f"OCR: {item['ocr_transcription'][:50]}...").pack(anchor=tk.W)
+            ttk.Label(info_frame, text=f"LLM: {item['llm_transcription']}").pack(anchor=tk.W)
+            ttk.Label(info_frame, text=f"OCR: {item['ocr_transcription']}").pack(anchor=tk.W)
 
 if __name__ == "__main__":
     app = ImageSearcher()
