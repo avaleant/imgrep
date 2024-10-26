@@ -39,6 +39,8 @@ class ImageSearcher(tk.Tk):
         self.search_entry = ttk.Entry(search_frame, width=50)
         self.search_entry.pack(side=tk.LEFT, padx=(0, 10))
 
+        self.search_entry.bind('<Return>', lambda e: self.perform_search())
+
         search_button = ttk.Button(search_frame, text="Search", command=self.perform_search)
         search_button.pack(side=tk.LEFT)
 
