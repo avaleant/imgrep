@@ -19,6 +19,12 @@ def ratio_hk(e1, e2, processor=None, score_cutoff=None):
     to_ocr = fuzz.token_set_ratio(e1.lower(), e2['ocr_transcription'].lower(), 
                       processor=processor, score_cutoff=score_cutoff)
     # print(f"Score for {e2['ocr_transcription']} is {to_ocr}")
+
+    # weight high single scores
+    if to_llm > 80:
+        to_llm *= 2
+    if to_ocr > 80:
+        to_ocr *= 2
     return (to_llm + to_ocr) / 2
 
 def search(query, limit=10, score_cutoff=None):
