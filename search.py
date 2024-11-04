@@ -1,5 +1,6 @@
 from tinydb import TinyDB, Query
 from rapidfuzz import process, fuzz
+from rapidfuzz.utils import default_process
 import sys
 import tkinter as tk
 from tkinter import ttk
@@ -12,12 +13,26 @@ db = TinyDB('memes.json')
 # Extremely primitive way to fuzz based on two keys in a value set
 # taking their average.
 
+def token_ignoring_surrounding_ratio(query, text):
+    # Tokenize query and text
+    query_tokens = set(default_process(query).split())
+    text_tokens = set(default_process(text).split())
+
+    if not query_tokens:
+        return 0
+
+    # Calculate how many query tokens are found in the text
+    matches = query_tokens.intersection(text_tokens)
+    return 100 * len(matches) / len(query_tokens)
+
 def ratio_hk(e1, e2, processor=None, score_cutoff=None):
-    to_llm = fuzz.token_set_ratio(e1.lower(), e2['llm_transcription'].lower(), 
-                      processor=processor, score_cutoff=score_cutoff)
+    to_llm = token_ignoring_surrounding_ratio(e1.lower(), e2['llm_transcription'].lower())
+    #fuzz.token_sort_ratio(e1.lower(), e2['llm_transcription'].lower(), 
+                      #processor=processor, score_cutoff=score_cutoff)
     # print(f"Score for {e2['llm_transcription']} is {to_llm}")
-    to_ocr = fuzz.token_set_ratio(e1.lower(), e2['ocr_transcription'].lower(), 
-                      processor=processor, score_cutoff=score_cutoff)
+    to_ocr = token_ignoring_surrounding_ratio(e1.lower(), e2['ocr_transcription'].lower())
+    # to_ocr = fuzz.token_sort_ratio(e1.lower(), e2['ocr_transcription'].lower(), 
+                     # processor=processor, score_cutoff=score_cutoff)
     # print(f"Score for {e2['ocr_transcription']} is {to_ocr}")
 
     # weight high single scores
