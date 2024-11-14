@@ -1,6 +1,8 @@
 from tinydb import TinyDB, Query
 from rapidfuzz import process, fuzz
+from rapidfuzz.process import cdist
 from rapidfuzz.utils import default_process
+from rapidfuzz.distance import Levenshtein
 import sys
 import tkinter as tk
 from tkinter import ttk
@@ -13,6 +15,18 @@ db = TinyDB('memes.json')
 # returns the hypothetical length of the set of "partial matches"
 # where, for instance, a 50% score would count as "half"
 def fuzzy_intersection_size(set1, set2):
+    similarity_matrix = cdist(list(set1), list(set2), scorer=fuzz.ratio)
+
+    fuzzy_sect = 0.0
+    for row in similarity_matrix:
+        if len(row) > 0:
+            max_sim = max(row) / 100.0  # Convert percentage to decimal
+            if max_sim >= 0.85:
+                fuzzy_sect += max_sim
+
+    return fuzzy_sect
+
+    """
     fuzzy_sect = 0.0 
     for s1 in set1:
         for s2 in set2:
@@ -24,6 +38,7 @@ def fuzzy_intersection_size(set1, set2):
                 fuzzy_sect += most_similar
                 
     return fuzzy_sect 
+    """
 
 # Extremely primitive way to fuzz based on two keys in a value set
 # taking their average.
@@ -38,7 +53,7 @@ def token_ignoring_surrounding_ratio(query, text):
     # Calculate how many query tokens are found in the text
     # matches = query_tokens.intersection(text_tokens)
     matches = fuzzy_intersection_size(query_tokens, text_tokens)
-    return 100 * len(matches) / len(query_tokens)
+    return 100 * matches / len(query_tokens)
 
 def ratio_hk(e1, e2, processor=None, score_cutoff=None):
     to_llm = token_ignoring_surrounding_ratio(e1.lower(), e2['llm_transcription'].lower())
