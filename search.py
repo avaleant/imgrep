@@ -10,9 +10,23 @@ from functools import partial
 
 db = TinyDB('memes.json')
 
+# returns the hypothetical length of the set of "partial matches"
+# where, for instance, a 50% score would count as "half"
+def fuzzy_intersection_size(set1, set2):
+    fuzzy_sect = 0.0 
+    for s1 in set1:
+        for s2 in set2:
+            sim = fuzz.ratio(s1, s2)
+            most_similar = 0.0
+            if sim > 85:
+                fuzzy_sect -= most_similar # don't count similarity twice
+                most_similar = sim / 100
+                fuzzy_sect += most_similar
+                
+    return fuzzy_sect 
+
 # Extremely primitive way to fuzz based on two keys in a value set
 # taking their average.
-
 def token_ignoring_surrounding_ratio(query, text):
     # Tokenize query and text
     query_tokens = set(default_process(query).split())
@@ -22,7 +36,8 @@ def token_ignoring_surrounding_ratio(query, text):
         return 0
 
     # Calculate how many query tokens are found in the text
-    matches = query_tokens.intersection(text_tokens)
+    # matches = query_tokens.intersection(text_tokens)
+    matches = fuzzy_intersection_size(query_tokens, text_tokens)
     return 100 * len(matches) / len(query_tokens)
 
 def ratio_hk(e1, e2, processor=None, score_cutoff=None):
