@@ -50,3 +50,4 @@ much better! for instance, llama3.2-vision consistently extracts text and respon
 
 this piece of software was assembled specifically to get a working and resilient pipeline without being able to rely on having the best currently available model which can accurately follow criteria - if you have the GPUs on hand to run llama3.2-vision on everything you want to index, you already have access to much better solutions.
 
+this isn't a trivial fix either that can be improved by using a *slightly* larger  model - llava-7b, for instance, performs worse than moondream across a wide variety of images when asked to extract text only.
