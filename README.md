@@ -43,3 +43,10 @@ yes, you can run both simultaneously.
 ### how much compute do I need?
 
 Less than you think. I've run Moondream inference CPU-only on a $80 laptop and taken ~30 seconds per image. Not optimal, wouldn't recommend, but it works.
+
+### aren't there better open source models?
+
+much better! for instance, llama3.2-vision consistently extracts text and responds with only text, even on screenshots of long paragraphs. But llama3.2-vision also takes up 4x as much space and significantly more compute and time.
+
+this piece of software was assembled specifically to get a working and resilient pipeline without being able to rely on having the best currently available model which can accurately follow criteria - if you have the GPUs on hand to run llama3.2-vision on everything you want to index, you already have access to much better solutions.
+
